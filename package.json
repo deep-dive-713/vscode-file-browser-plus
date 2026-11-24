@@ -1,21 +1,24 @@
 {
-    "name": "file-browser",
-    "publisher": "bodil",
-    "displayName": "File Browser",
-    "description": "A nicer alternative to the file open dialog.",
-    "version": "0.2.11",
+    "name": "file-browser-plus",
+    "publisher": "deep-dive-713",
+    "displayName": "File Browser Plus",
+    "description": "A keyboard driven file open dialog with dired-like details: permissions, sizes, link targets, chmod, new folders and folder sizes. Fork of bodil.file-browser.",
+    "version": "0.3.0",
     "license": "LGPL-3.0+",
     "author": {
-        "name": "Bodil Stokke",
-        "url": "https://bodil.lol/"
+        "name": "deep-dive-713"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/bodil/vscode-file-browser"
+        "url": "https://github.com/deep-dive-713/vscode-file-browser-plus"
     },
     "keywords": [
         "emacs",
-        "helm"
+        "helm",
+        "dired",
+        "file browser",
+        "chmod",
+        "permissions"
     ],
     "icon": "images/icon.png",
     "engines": {
@@ -31,29 +34,29 @@
     ],
     "contributes": {
         "configuration": {
-            "title": "File Browser",
+            "title": "File Browser Plus",
             "properties": {
-                "file-browser.removeIgnoredFiles": {
-                    "markdownDescription": "Never show or match files that are hidden when matching by either `#file-browser.hideIgnoredFiles#` or `#file-browser.hideDotfiles#`.",
+                "file-browser-plus.removeIgnoredFiles": {
+                    "markdownDescription": "Never show or match files that are hidden when matching by either `#file-browser-plus.hideIgnoredFiles#` or `#file-browser-plus.hideDotfiles#`.",
                     "type": "boolean",
                     "default": false
                 },
-                "file-browser.hideDotfiles": {
+                "file-browser-plus.hideDotfiles": {
                     "markdownDescription": "When filtering by name, hide unmatched dotfiles (files whose names start with `.`).",
                     "type": "boolean",
                     "default": true
                 },
-                "file-browser.hideIgnoredFiles": {
-                    "markdownDescription": "When filtering by name, hide unmatched files according to rules in `.gitignore` style files, as defined in `#file-browser.ignoreFileTypes#`.",
+                "file-browser-plus.hideIgnoredFiles": {
+                    "markdownDescription": "When filtering by name, hide unmatched files according to rules in `.gitignore` style files, as defined in `#file-browser-plus.ignoreFileTypes#`.",
                     "type": "boolean",
                     "default": false
                 },
-                "file-browser.labelIgnoredFiles": {
+                "file-browser-plus.labelIgnoredFiles": {
                     "markdownDescription": "Label files hidden by a `.gitignore` file as such.",
                     "type": "boolean",
                     "default": false
                 },
-                "file-browser.ignoreFileTypes": {
+                "file-browser-plus.ignoreFileTypes": {
                     "markdownDescription": "A list of `.gitignore` style files to look for and hide files accordingly when browsing. The extension will obey only the first file it finds from this list, searching upwards from the current directory, so make sure the order is as you like it.",
                     "type": "array",
                     "items": {
@@ -64,56 +67,85 @@
                         ".npmignore",
                         ".vscodeignore"
                     ]
+                },
+                "file-browser-plus.showPermissions": {
+                    "markdownDescription": "Show permissions such as `drwxr-xr-x` next to each entry. Ignored on Windows.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "file-browser-plus.showSize": {
+                    "markdownDescription": "Show the size of each file next to it (like `ls -lh`). Folder sizes are only calculated on request, from the actions of a folder.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "file-browser-plus.showLinkTarget": {
+                    "markdownDescription": "Show where each symbolic link points to.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "file-browser-plus.folderSizeTimeLimit": {
+                    "markdownDescription": "Stop calculating a folder size after this many seconds and show the partial result. `0` means no limit.",
+                    "type": "number",
+                    "default": 10,
+                    "minimum": 0
                 }
             }
         },
         "commands": [
             {
-                "command": "file-browser.open",
-                "title": "File Browser: Open"
+                "command": "file-browser-plus.open",
+                "title": "File Browser Plus: Open"
             },
             {
-                "command": "file-browser.rename",
-                "title": "File Browser: Rename"
+                "command": "file-browser-plus.rename",
+                "title": "File Browser Plus: Rename"
             },
             {
-                "command": "file-browser.stepIn",
-                "title": "File Browser: Step In"
+                "command": "file-browser-plus.stepIn",
+                "title": "File Browser Plus: Step In"
             },
             {
-                "command": "file-browser.stepOut",
-                "title": "File Browser: Step Out"
+                "command": "file-browser-plus.stepOut",
+                "title": "File Browser Plus: Step Out"
             },
             {
-                "command": "file-browser.actions",
-                "title": "File Browser: Actions"
+                "command": "file-browser-plus.actions",
+                "title": "File Browser Plus: Actions"
+            },
+            {
+                "command": "file-browser-plus.openToSide",
+                "title": "File Browser Plus: Open to the Side"
+            },
+            {
+                "command": "file-browser-plus.newFolder",
+                "title": "File Browser Plus: New Folder"
             }
         ],
         "keybindings": [
             {
                 "key": "right",
-                "command": "file-browser.stepIn",
-                "when": "inFileBrowser"
+                "command": "file-browser-plus.stepIn",
+                "when": "inFileBrowserPlus"
             },
             {
                 "key": "left",
-                "command": "file-browser.stepOut",
-                "when": "inFileBrowser"
+                "command": "file-browser-plus.stepOut",
+                "when": "inFileBrowserPlus"
             },
             {
                 "key": "ctrl+a",
-                "command": "file-browser.actions",
-                "when": "inFileBrowser"
+                "command": "file-browser-plus.actions",
+                "when": "inFileBrowserPlus"
             },
             {
                 "key": "tab",
-                "command": "file-browser.tabNext",
-                "when": "inFileBrowser"
+                "command": "file-browser-plus.tabNext",
+                "when": "inFileBrowserPlus"
             },
             {
                 "key": "shift+tab",
-                "command": "file-browser.tabPrev",
-                "when": "inFileBrowser"
+                "command": "file-browser-plus.tabPrev",
+                "when": "inFileBrowserPlus"
             }
         ]
     },
@@ -122,7 +154,8 @@
         "compile": "tsc -p ./",
         "lint": "eslint src",
         "watch": "tsc -watch -p ./",
-        "check": "npm run compile && npm run lint"
+        "check": "npm run compile && npm run lint",
+        "package": "vsce package --no-dependencies"
     },
     "devDependencies": {
         "@eslint/js": "^9.11.1",
@@ -143,5 +176,17 @@
     "dependencies": {
         "@bodil/opt": "^0.2.5",
         "ignore": "^6.0.2"
-    }
+    },
+    "contributors": [
+        {
+            "name": "Bodil Stokke",
+            "url": "https://bodil.lol/"
+        }
+    ],
+    "bugs": {
+        "url": "https://github.com/deep-dive-713/vscode-file-browser-plus/issues"
+    },
+    "activationEvents": [
+        "onStartupFinished"
+    ]
 }

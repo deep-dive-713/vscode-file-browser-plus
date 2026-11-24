@@ -7,12 +7,15 @@ export enum Action {
     DeleteFile,
     OpenFolder,
     OpenFolderInNewWindow,
+    NewFolderHere,
+    ChangePermissions,
+    FolderSize,
 }
 
-export function action(label: string, action: Action) {
+export function action(label: string, action: Action, name: string = "") {
     return {
         label,
-        name: "",
+        name,
         action,
         alwaysShow: true,
     };
