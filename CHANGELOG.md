@@ -13,7 +13,8 @@ First release as File Browser Plus, a fork of `bodil.file-browser` 0.2.11.
 ### ADDED
 
 - Show permissions, file sizes and symbolic link targets next to each entry.
-- Change permissions (`chmod`) from the actions.
+- Change permissions (`chmod`) from the actions. For a folder: only the folder, recursively, or
+  items checked from a list.
 - Create a new folder or a new file in the listed folder (title bar button, command, actions).
 - Calculate a folder size on request, in the background, with a time limit.
 - "Open to the side" button on files and `file-browser-plus.openToSide` command

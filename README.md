@@ -31,7 +31,10 @@ Added in File Browser Plus:
   symbolic links, where the link points to. Each can be turned off in the settings. Permissions
   are not shown on Windows.
 - Change permissions from the actions (`Ctrl+A`): enter an octal mode (`755`) or a symbolic one
-  (`u+x,go-w`), like `chmod`. Not available on Windows.
+  (`u+x,go-w`), like `chmod`. Not available on Windows. For a folder, choose whether to change
+  only the folder, the folder and everything under it (like `chmod -R`; symbolic links are
+  skipped), or items checked from a list of what is inside the folder. A symbolic mode is worked
+  out from each item's own permissions, so `a+X` adds `x` only to folders and executables.
 - Create a folder in the listed folder with the "New folder" button in the title bar, the
   `file-browser-plus.newFolder` command, or from the actions. Use `/` to create nested folders.
 - Create a new file from the actions, too.
