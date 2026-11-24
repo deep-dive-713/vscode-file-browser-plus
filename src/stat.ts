@@ -222,3 +222,51 @@ export async function folderSize(
     }
     return result;
 }
+
+/** `root` and every folder and file under it. Symbolic links are skipped, not followed. */
+export async function listTree(root: string): Promise<string[]> {
+    const result = [root];
+    const stack = [root];
+    while (stack.length > 0) {
+        const dir = stack.pop() as string;
+        const entries = await FS.promises
+            .readdir(dir, { withFileTypes: true })
+            .catch(() => [] as FS.Dirent[]);
+        for (const entry of entries) {
+            const full = OSPath.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                result.push(full);
+                stack.push(full);
+            } else if (entry.isFile()) {
+                result.push(full);
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * Apply a `chmod` mode to each path. A symbolic mode (`u+x`, `a+X`) is worked out from each
+ * path's own current mode. Returns the paths that could not be changed.
+ */
+export async function chmodAll(paths: string[], input: string): Promise<string[]> {
+    const failed: string[] = [];
+    for (const path of paths) {
+        const st = await FS.promises.lstat(path).catch(() => undefined);
+        if (!st || st.isSymbolicLink()) {
+            failed.push(path);
+            continue;
+        }
+        const mode = parseChmod(input, st.mode, st.isDirectory());
+        const ok =
+            typeof mode === "number" &&
+            (await FS.promises.chmod(path, mode).then(
+                () => true,
+                () => false,
+            ));
+        if (!ok) {
+            failed.push(path);
+        }
+    }
+    return failed;
+}

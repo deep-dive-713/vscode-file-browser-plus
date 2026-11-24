@@ -12,6 +12,8 @@ import { action, Action } from "./action";
 import {
     EntryDetails,
     canUseNodeFs,
+    chmodAll,
+    listTree,
     folderSize,
     isWindows,
     modeString,
@@ -511,45 +513,123 @@ class FileBrowser {
         }
     }
 
-    /** Change the permissions of the selected item (like `M` in dired). */
+    /**
+     * Change the permissions of the selected item (like `M` in dired). For a folder, first ask
+     * whether to change only the folder, the folder and everything under it (`chmod -R`), or
+     * items picked from inside the folder.
+     */
     async changePermissions() {
         const target = this.path.fsPath;
+        const targetName = OSPath.basename(target);
         this.keepAlive = true;
         this.hide();
         const st = await FS.promises.stat(target).catch(() => undefined);
-        if (st) {
-            const result = await vscode.window.showInputBox({
-                prompt: `Permissions of ${OSPath.basename(target)}: now ${modeString(
-                    st.mode,
-                )} (${octalString(st.mode)}). Enter octal (644) or symbolic (u+x,go-w).`,
-                value: octalString(st.mode),
-                validateInput: (value) => {
-                    const parsed = parseChmod(value, st.mode, st.isDirectory());
-                    return typeof parsed === "string" ? parsed : undefined;
-                },
-            });
-            if (result !== undefined) {
-                const mode = parseChmod(result, st.mode, st.isDirectory());
-                if (typeof mode === "number") {
-                    const changed = await FS.promises.chmod(target, mode).then(
-                        () => true,
-                        () => false,
-                    );
-                    if (!changed) {
-                        vscode.window.showErrorMessage(
-                            `Failed to change permissions of "${OSPath.basename(target)}"`,
-                        );
-                    }
-                }
-            }
-        } else {
+        if (!st) {
             vscode.window.showErrorMessage(`Can't read "${target}"`);
+        } else {
+            const paths = st.isDirectory() ? await this.choosePermissionTargets(target) : [target];
+            if (paths && paths.length > 0) {
+                await this.askAndChmod(
+                    paths,
+                    paths.length === 1
+                        ? OSPath.basename(paths[0])
+                        : `${paths.length} items in ${targetName}`,
+                );
+            }
         }
         this.file = this.path.pop();
         this.inActions = false;
         this.show();
         this.keepAlive = false;
         await this.update();
+    }
+
+    /** Ask which items of a folder to change. Returns undefined when cancelled. */
+    async choosePermissionTargets(folder: string): Promise<string[] | undefined> {
+        const name = OSPath.basename(folder);
+        const only = `$(folder) Only the folder "${name}"`;
+        const recursive = `$(list-tree) "${name}" and everything under it (chmod -R)`;
+        const pick = `$(checklist) Choose items inside "${name}"…`;
+        const scope = await vscode.window.showQuickPick([only, recursive, pick], {
+            placeHolder: `Change the permissions of which items?`,
+        });
+        if (scope === only) {
+            return [folder];
+        }
+        if (scope === recursive) {
+            return vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: `Listing ${name}…` },
+                () => listTree(folder),
+            );
+        }
+        if (scope !== pick) {
+            return undefined;
+        }
+        const entries = await FS.promises
+            .readdir(folder, { withFileTypes: true })
+            .catch(() => [] as FS.Dirent[]);
+        const records = entries
+            .filter((e) => e.isDirectory() || e.isFile())
+            .map((e): [string, FileType] => [
+                e.name,
+                e.isDirectory() ? FileType.Directory : FileType.File,
+            ]);
+        records.sort(fileRecordCompare);
+        const details = await readAllDetails(
+            folder,
+            records.map(([n]) => n),
+        );
+        const items = records.map(([n, type]) => {
+            const d = details.get(n);
+            return {
+                label: `${type === FileType.Directory ? "$(folder)" : "$(file)"} ${n}`,
+                description:
+                    d && d.mode !== undefined
+                        ? `${modeString(d.mode)} ${octalString(d.mode)}`
+                        : undefined,
+                name: n,
+            };
+        });
+        const chosen = await vscode.window.showQuickPick(items, {
+            canPickMany: true,
+            placeHolder: `Check the items in ${name} to change (Space to check, Enter to accept)`,
+        });
+        return chosen?.map((item) => OSPath.join(folder, item.name));
+    }
+
+    /** Ask for a mode and apply it to `paths`. */
+    async askAndChmod(paths: string[], what: string) {
+        const st = await FS.promises.stat(paths[0]).catch(() => undefined);
+        if (!st) {
+            return;
+        }
+        const now =
+            paths.length === 1 ? ` now ${modeString(st.mode)} (${octalString(st.mode)}).` : "";
+        const result = await vscode.window.showInputBox({
+            prompt:
+                `Permissions of ${what}:${now} Enter octal (644) or symbolic (u+x,go-w).` +
+                (paths.length > 1 ? " Use X (a+X) to set x only on folders and executables." : ""),
+            value: paths.length === 1 ? octalString(st.mode) : "",
+            validateInput: (value) => {
+                const parsed = parseChmod(value, st.mode, st.isDirectory());
+                return typeof parsed === "string" ? parsed : undefined;
+            },
+        });
+        if (result === undefined) {
+            return;
+        }
+        const failed = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Changing permissions…` },
+            () => chmodAll(paths, result),
+        );
+        if (failed.length > 0) {
+            vscode.window.showErrorMessage(
+                `Failed to change permissions of ${failed.length} of ${paths.length} items` +
+                    ` (first: ${failed[0]})`,
+            );
+        } else if (paths.length > 1) {
+            vscode.window.showInformationMessage(`Changed permissions of ${paths.length} items`);
+        }
     }
 
     /**
